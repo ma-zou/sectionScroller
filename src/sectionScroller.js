@@ -21,7 +21,6 @@ function sectionScroller(options) {
     };
 
     var handler = function(event) {
-        
         if(event.type === "keydown") {
             if (_self.keycodes.up.indexOf(event.keyCode) !== -1) {
                 var delta = -1;
@@ -31,19 +30,28 @@ function sectionScroller(options) {
                 return;
             }
         } else {
-            var delta = Math.sign(event.deltaY);  
+            var delta = event.deltaY;  
         }
-        event.preventDefault();
         if(_self.scrolling) return;
-
+        
         if(delta > 0) {
-            _self.scrolling = true;
-            _self.moveNext();
-            scrollTimeout();
+            if((_self.current === _self.amount && window.pageYOffset > _self.container.scrollHeight) || (_self.current === 0 && window.pageYOffset < _self.container.offsetTop)) {
+                return
+            } else {
+                event.preventDefault();
+                _self.scrolling = true;
+                _self.moveNext();
+                scrollTimeout();
+            }
         } else {
-            _self.movePrevious();
-            _self.scrolling = true;
-            scrollTimeout();
+            if((_self.current === _self.amount && window.pageYOffset > _self.container.scrollHeight) || (_self.current === 0 && window.pageYOffset < _self.container.offsetTop)) {
+                return;
+            } else {
+                event.preventDefault();
+                _self.movePrevious();
+                _self.scrolling = true;
+                scrollTimeout();
+            }
         }
     }
     var scrollTimeout = function() {
@@ -53,43 +61,43 @@ function sectionScroller(options) {
     }
     var scrolling = function (target, callback) {
         var easings = {
-            linear(t) {
+            linear: function(t) {
                 return t;
             },
-            easeInQuad(t) {
+            easeInQuad: function(t) {
                 return t * t;
             },
-            easeOutQuad(t) {
+            easeOutQuad: function(t) {
                 return t * (2 - t);
             },
-            easeInOutQuad(t) {
+            easeInOutQuad: function(t) {
                 return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
             },
-            easeInCubic(t) {
+            easeInCubic: function(t) {
                 return t * t * t;
             },
-            easeOutCubic(t) {
+            easeOutCubic: function(t) {
                 return (--t) * t * t + 1;
             },
-            easeInOutCubic(t) {
+            easeInOutCubic: function(t) {
                 return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
             },
-            easeInQuart(t) {
+            easeInQuart: function(t) {
                 return t * t * t * t;
             },
-            easeOutQuart(t) {
+            easeOutQuart: function(t) {
                 return 1 - (--t) * t * t * t;
             },
-            easeInOutQuart(t) {
+            easeInOutQuart: function(t) {
                 return t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t;
             },
-            easeInQuint(t) {
+            easeInQuint: function(t) {
                 return t * t * t * t * t;
             },
-            easeOutQuint(t) {
+            easeOutQuint: function(t) {
                 return 1 + (--t) * t * t * t * t;
             },
-            easeInOutQuint(t) {
+            easeInOutQuint: function(t) {
                 return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * (--t) * t * t * t * t;
             }
         };
@@ -145,13 +153,23 @@ function sectionScroller(options) {
             }, (_self.options.transitionDuration / 2));
         }, (_self.options.transitionDuration / 2));
     }
+    var positionObserver = function() {
+        for (var i = 0; i < _self.elements.length; i++) {
+            if(_self.elements[i].offsetTop > window.pageYOffset) break;
+            else _self.current = i;
+        }
+    }
     _self.init = function() {
         var i = 0;
         window.addEventListener('mousewheel', handler, {passive: false});
+        window.addEventListener('wheel', handler, {passive: false});
         document.addEventListener('keydown', handler);
 
+        positionObserver();
+        console.log(_self.current);
+
         [].forEach.call(_self.elements, function(element) {
-            if(i === 0) element.classList.add('active');
+            if(i === _self.current) element.classList.add('active');
             element.setAttribute('data-section', i);
             i++;
         });
