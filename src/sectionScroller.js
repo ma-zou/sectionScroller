@@ -15,10 +15,24 @@ function sectionScroller(options) {
     _self.elements = _self.container.children
     _self.current = _self.options.startAt;
     _self.amount = _self.elements.length - 1;
+    _self.keycodes = {
+        up: [38, 33],
+        down: [34, 40]
+    };
 
     var handler = function(event) {
-        var delta = Math.sign(event.deltaY);   
-
+        
+        if(event.type === "keydown") {
+            if (_self.keycodes.up.indexOf(event.keyCode) !== -1) {
+                var delta = -1;
+            } else if (_self.keycodes.down.indexOf(event.keyCode) !== -1) {
+                var delta = 1;
+            } else {
+                return;
+            }
+        } else {
+            var delta = Math.sign(event.deltaY);  
+        }
         event.preventDefault();
         if(_self.scrolling) return;
 
@@ -81,7 +95,7 @@ function sectionScroller(options) {
         };
         
         var start = window.pageYOffset,
-            destination = document.querySelector('section[data-section="'+target+'"]'),
+            destination = document.querySelector('[data-section="'+target+'"]'),
             startTime = 'now' in window.performance ? performance.now() : new Date().getTime(),
             documentHeight = Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight),
             windowHeight = window.innerHeight || document.documentElement.clientHeight || document.getElementsByTagName('body')[0].clientHeight,
@@ -115,11 +129,29 @@ function sectionScroller(options) {
     
         animatedScroll();
     }
+    var setClasses = function(next) {
+        var nextElm = document.querySelector('[data-section="'+next+'"]'),
+            currentElm = document.querySelector('[data-section="'+_self.current+'"]');
+
+        nextElm.classList.add('scrollingIn');
+        currentElm.classList.add('scrollingOut');
+        
+        setTimeout(function() {
+            nextElm.classList.add('active');
+            currentElm.classList.remove('active');
+            setTimeout(function() {
+                nextElm.classList.remove('scrollingIn');
+                currentElm.classList.remove('scrollingOut');
+            }, (_self.options.transitionDuration / 2));
+        }, (_self.options.transitionDuration / 2));
+    }
     _self.init = function() {
         var i = 0;
         window.addEventListener('mousewheel', handler, {passive: false});
+        document.addEventListener('keydown', handler);
 
         [].forEach.call(_self.elements, function(element) {
+            if(i === 0) element.classList.add('active');
             element.setAttribute('data-section', i);
             i++;
         });
@@ -130,23 +162,21 @@ function sectionScroller(options) {
         } else {
             return;
         }
+        setClasses(target);
         scrolling(target, true);
     }
     _self.moveNext = function() {  
         if(_self.current === _self.amount) return;
         var target = _self.current + 1;
+        setClasses(target);
         scrolling(target, true);
     }  
     _self.movePrevious = function() {
         if(_self.current === 0) return;
         var target = _self.current - 1;
-        
+        setClasses(target);
         scrolling(target, true);
     }  
 
     if(_self.options.init) _self.init();
-}
-
-window.onload = function() {
-    var scroller = new sectionScroller();
 }
