@@ -6,7 +6,8 @@ function sectionScroller(options) {
         init: true,
         transitionDuration: 600,
         timingFunction: 'easeInQuad',
-        startAt: 0
+        startAt: 0,
+        scrollOffset: 0
     }
 
     _self.options = J.merge(_self.options, options);
@@ -110,6 +111,11 @@ function sectionScroller(options) {
             destinationOffset = typeof destination === 'number' ? destination : destination.offsetTop,
             destinationOffsetToScroll = Math.round(documentHeight - destinationOffset < windowHeight ? documentHeight - windowHeight : destinationOffset);
     
+        console.log('Before:', destinationOffset);
+        
+        destinationOffset = (typeof _self.options.scrollOffset == 'number') ? destinationOffset - _self.options.scrollOffset : destinationOffset - document.querySelector(_self.options.scrollOffset).scrollHeight;
+        console.log('After:', destinationOffset);
+
         if ('requestAnimationFrame' in window === false) {
             window.animatedScroll(0, destinationOffsetToScroll);
             if (callback) {
