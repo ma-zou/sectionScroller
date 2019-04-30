@@ -22,36 +22,50 @@ function sectionScroller(options) {
     };
 
     var handler = function(event) {
+        var beforeSection = (_self.current === _self.amount && window.pageYOffset > _self.container.scrollHeight) || (_self.current === 0 && window.pageYOffset < _self.container.offsetTop),
+            afterSection = (_self.current === _self.amount && window.pageYOffset > _self.container.scrollHeight) || (_self.current === 0 && window.pageYOffset < _self.container.offsetTop),
+            windowHeight = window.innerHeight || document.documentElement.clientHeight || document.getElementsByTagName('body')[0].clientHeight,
+            sectionHeight = Math.max(_self.currentElement.offsetHeight, _self.currentElement.clientHeight, _self.currentElement.scrollHeight),
+            delta = 0;
+        
         if(event.type === "keydown") {
             if (_self.keycodes.up.indexOf(event.keyCode) !== -1) {
-                var delta = -1;
+                delta = -100;
             } else if (_self.keycodes.down.indexOf(event.keyCode) !== -1) {
-                var delta = 1;
+                delta = 100;
             } else {
                 return;
             }
         } else {
-            var delta = event.deltaY;  
+            delta = event.deltaY;  
         }
         if(_self.scrolling) return;
         
-        if(delta > 0) {
-            if((_self.current === _self.amount && window.pageYOffset > _self.container.scrollHeight) || (_self.current === 0 && window.pageYOffset < _self.container.offsetTop)) {
+        if(delta > 0) { // down
+            if(beforeSection) {
                 return
             } else {
-                event.preventDefault();
-                _self.scrolling = true;
-                _self.moveNext();
-                scrollTimeout();
+                if(sectionHeight > windowHeight && window.pageYOffset < _self.currentElement.offsetTop + sectionHeight - windowHeight) {
+                    return;
+                } else {
+                    event.preventDefault();
+                    _self.scrolling = true;
+                    _self.moveNext();
+                    scrollTimeout();
+                }
             }
-        } else {
-            if((_self.current === _self.amount && window.pageYOffset > _self.container.scrollHeight) || (_self.current === 0 && window.pageYOffset < _self.container.offsetTop)) {
+        } else { // up
+            if(afterSection) {
                 return;
             } else {
-                event.preventDefault();
-                _self.movePrevious();
-                _self.scrolling = true;
-                scrollTimeout();
+                if(sectionHeight > windowHeight && window.pageYOffset > _self.currentElement.offsetTop) {
+                    return;
+                } else {
+                    event.preventDefault();
+                    _self.movePrevious();
+                    _self.scrolling = true;
+                    scrollTimeout();
+                }
             }
         }
     }
@@ -109,16 +123,13 @@ function sectionScroller(options) {
             documentHeight = Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight),
             windowHeight = window.innerHeight || document.documentElement.clientHeight || document.getElementsByTagName('body')[0].clientHeight,
             destinationOffset = typeof destination === 'number' ? destination : destination.offsetTop,
-            destinationOffsetToScroll = Math.round(documentHeight - destinationOffset < windowHeight ? documentHeight - windowHeight : destinationOffset);
-    
-        console.log('Before:', destinationOffset);
-        
-        destinationOffset = (typeof _self.options.scrollOffset == 'number') ? destinationOffset - _self.options.scrollOffset : destinationOffset - document.querySelector(_self.options.scrollOffset).scrollHeight;
-        console.log('After:', destinationOffset);
+            scrollOffset = (typeof _self.options.scrollOffset == 'number') ? _self.options.scrollOffset : document.querySelector(_self.options.scrollOffset).clientHeight,
+            destinationOffsetToScroll = Math.round(documentHeight - destinationOffset < windowHeight ? documentHeight - windowHeight : destinationOffset) - scrollOffset;
 
         if ('requestAnimationFrame' in window === false) {
             window.animatedScroll(0, destinationOffsetToScroll);
             if (callback) {
+                _self.currentElement = destination;
                 _self.current = target;
             }
             return;
@@ -133,6 +144,7 @@ function sectionScroller(options) {
         
             if (window.pageYOffset === destinationOffsetToScroll) {
                 if (callback) {
+                    _self.currentElement = destination;
                     _self.current = target;
                 }
                 return;
@@ -160,8 +172,9 @@ function sectionScroller(options) {
         }, (_self.options.transitionDuration / 2));
     }
     var positionObserver = function() {
+        var scrollOffset = (typeof _self.options.scrollOffset == 'number') ? _self.options.scrollOffset : document.querySelector(_self.options.scrollOffset).clientHeight
         for (var i = 0; i < _self.elements.length; i++) {
-            if(_self.elements[i].offsetTop > window.pageYOffset) break;
+            if(_self.elements[i].offsetTop > window.pageYOffset + scrollOffset) break;
             else _self.current = i;
         }
     }
@@ -172,10 +185,12 @@ function sectionScroller(options) {
         document.addEventListener('keydown', handler);
 
         positionObserver();
-        console.log(_self.current);
 
         [].forEach.call(_self.elements, function(element) {
-            if(i === _self.current) element.classList.add('active');
+            if(i === _self.current) {
+                element.classList.add('active');
+                _self.currentElement = element;
+            }
             element.setAttribute('data-section', i);
             i++;
         });
@@ -201,6 +216,9 @@ function sectionScroller(options) {
         setClasses(target);
         scrolling(target, true);
     }  
+    _self.update = function(options) {
+        _self.options = J.merge(_self.options, options);
+    };
 
     if(_self.options.init) _self.init();
 }
